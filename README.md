@@ -294,3 +294,106 @@ Broker 103
 - Kafka 3.x now implements the Raft protocol ( KRaft ) in order to replace Zookeeper
   - Production readt since kafka 3.3.1 ( KIP-883 )
   - Kafka 4.0 will be released only with KRaft ( No Zookeper )
+
+## Kafka CLI
+
+- OBS: If you use windows with WLS 2, maybe you need add this configurations
+
+  ```
+    netsh interface portproxy add v4tov4 listenport=9092 listenaddress=0.0.0.0 connectport=9092 connectaddress=XXX.XX.XX.XX
+  ```
+
+  - Valid if this work
+
+  ```
+    powershell Test-NetConnection -ComputerName 127.0.0.1 -Port 9092
+  ```
+
+- Start Kafka with Kraft
+
+  - generate a Kafka UUID
+
+    ```
+      kafka-storage.sh random-uuid
+    ```
+
+  - This returns a UUID, for example 76BLQI7sT_ql1mBfKsOk9Q
+
+    ```
+      kafka-storage.sh format -t <uuid> -c ~/kafka_2.13-3.1.0/config/kraft/server.properties
+    ```
+
+  - This will format the directory that is in the log.dirs in the config/kraft/server.properties file
+
+  - start Kafka
+    ```
+      kafka-server-start.sh ~/kafka_2.13-3.1.0/config/kraft/server.properties
+    ```
+
+- Create Topic
+  ```
+    kafka-topics.sh --bootstrap-server localhost:9092 --topic third_topic --create --partitions 3 --replication-factor 1
+  ```
+- List Topics
+  ```
+    kafka-topics.sh --bootstrap-server localhost:9092 --list
+  ```
+- Describe Topic
+  ```
+    kafka-topics.sh --bootstrap-server localhost:9092 --topic first_topic --describe
+  ```
+- Delete Topic
+  ```
+    kafka-topics.sh --bootstrap-server localhost:9092 --topic first_topic --delete
+  ```
+- Producing
+
+  ```
+    kafka-console-producer.sh --bootstrap-server localhost:9092 --topic first_topic
+  ```
+
+  ```
+      kafka-console-producer.sh --bootstrap-server localhost:9092 --topic first_topic --producer-property acks=all
+  ```
+
+  ```
+     kafka-console-producer.sh --bootstrap-server localhost:9092 --producer-property partitioner.class=org.apache.kafka.clients.producer.RoundRobinPartitioner --topic second_topic
+  ```
+
+- Producing with key
+  ```
+    kafka-console-producer.sh --bootstrap-server localhost:9092 --topic first_topic --property parse.key=true --property key.separator=:
+  ```
+- Consumer
+
+  ```
+    kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic second_topic
+  ```
+
+  ```
+    kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic second_topic --formatter kafka.tools.DefaultMessageFormatter --property print.timestamp=true --property print.key=true --property print.value=true --property print.partition=true --from-beginning
+  ```
+
+- Group
+
+  ```
+  kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic third_topic --group my-first-application
+  ```
+
+  - List
+
+  ```
+    kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+  ```
+
+  - Describe
+
+  ```
+    kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group my-second-application
+  ```
+
+  - Dry Run: reset the offsets to the beginning of each partition
+
+  ```
+    kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group my-first-application --reset-offsets --to-earliest --topic third_topic --dry-run
+  ```
