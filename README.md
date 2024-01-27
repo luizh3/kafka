@@ -295,6 +295,60 @@ Broker 103
   - Production readt since kafka 3.3.1 ( KIP-883 )
   - Kafka 4.0 will be released only with KRaft ( No Zookeper )
 
+## Coperative Rebalance
+
+- Kafka Consumer: partitio.assignmen.strategy
+  - RangeAssignor: assign partitions on a per-topic basis ( can lead to imbalance )
+  - RoundRobin: Assign partitions across all topics in round-robin fashion, optimal balanca
+  - StickyAssignor: Balance like RoundRobin, and then minimises partition movements when consumer join / leave the group in order to minimize movements
+  - CooperativeStickyAssignor: rebalance strategy is identical to StickyAssignor but supports cooperative rebalances and therefore consumers can keep on consuming from the topic
+  - The default assignor is [RangeAssignor, CooperativeStickyAssignor], which will use the RangeAssignor by default, but allows upgrading to the CooperativeStickyAssignor with just a single rolling bounce that removes the RangeAssignor from the list
+- Kafka Connect: Already implemented ( Enabled by default )
+- Kafka Streams: Turned on by default using StreamsPartitionAssignor
+
+## Static Group Membership
+
+- By Default, when a consume leaves a group, its partitions are revoked and re-assigned
+- If it join back, it will have a new "member ID" and new partitions assigned
+- If you specify group.instance.id it makes the consumer a static member
+- Upon leaving, the consumer has up to session.timeout.ms to join back and get back its partitions ( else they will be re-assigned ), without triggering a rebalance
+- This is helpful when consumers maintain local state and cache ( To avoid re-building the cache )
+
+## Producer acks=all & mind.insync.replicas
+
+- The leader replica for a partition checks to see if there are enough in-sync replicas for safely writing the message ( Controlled by the broker setting min.insync.replicas )
+  - min.insync.replicas=1: Only the broker leader needs to successfully ack
+  - min.insync.replicas=2: at least the broker leader and one replica need to ack
+
+## Kafka Topic Avaiability
+
+- Availability: ( Considering RF=3 )
+  - acks=0 & acks=1: if one partitions is up considered an ISR, the topic will be avaiable for writes.
+  - acks=all:
+    - min.insync.replicas=1 (default): the topic must have at least 1 partition up as an ISR( that includes the leader ) and so we can tolerate two brokers begn down
+    - min.insync.replicas=2: the topic must have at least 2 ISR up, and therefore we can tolerate at most one broker beign down ( in the case of replication factor of 3 ), and we have the guarantee that for every write, the data will be at least written twice
+    - min.insync.replicas=3: this wouldn't make much sense for a corresponding replication factor of 3 and we couldn't tolerate any broker going down.
+    - In summary, when acks=all with replication.factor=N and min.insync.replicas=M we can tolerate N-M brokers going down for topic avaiability purposes
+
+## Message Compression at the Producer level
+
+- Compression can be enabled at the Producer level and doesn't require any configuration change in the Brokers or in the Consumers
+
+- compression.type can be none ( default ), gzip, lz4, snappy, zstd ( Kafka 2.1 )
+
+- Compression is more effective the bigger the batch of message beign sent to Kafka.
+
+## Compresion at the broker
+
+- compression.type=producer (default), the broker takes compressed batch from the producer client and writes it directly to the topic's log file without recompressing the data
+- compression.type=none: all batches are decompressed by the broker
+- compression.type=lz4
+
+  - If it's matching the producer setting, data is stored on disk as is
+  - If it's a different compression setting, batches are decompressed by the broker and then recompressed using the compression algorithm specified
+
+- Warning: if you enable broker-side compression, it will consume extra CPU cycles.
+
 ## Kafka CLI
 
 - OBS: If you use windows with WLS 2, maybe you need add this configurations
