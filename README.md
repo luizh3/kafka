@@ -349,6 +349,29 @@ Broker 103
 
 - Warning: if you enable broker-side compression, it will consume extra CPU cycles.
 
+## Kafka Connect Source
+
+To import data from external databases
+
+## Kafka Streams
+
+To transform data from a Kafka topic to another one
+
+## Kafka Connect Sink
+
+To continuously export data from Kafka into a target database
+
+## Topic configuration
+
+- Some topics may need different values than the default
+  - Replication Factor
+  - # of Partitions
+  - Message Size
+  - Compression level
+  - Log Cleanup Policy
+  - Min insync replicas
+  - Other configurations
+
 ## Kafka CLI
 
 - OBS: If you use windows with WLS 2, maybe you need add this configurations
@@ -450,4 +473,25 @@ Broker 103
 
   ```
     kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group my-first-application --reset-offsets --to-earliest --topic third_topic --dry-run
+  ```
+
+- Configs
+
+  - Set a config
+
+  ```
+    kafka-configs.sh --bootstrap-server localhost:9092 --entity-type topics --entity-name configured-topic --alter --add-config min.insync
+  .replicas=2
+  ```
+
+  - Listen configs
+
+    ```
+      kafka-configs.sh --bootstrap-server localhost:9092 --entity-type topics --entity-name configured-topic --describe
+    ```
+
+  -- Delete config
+
+  ```
+    kafka-configs.sh --bootstrap-server localhost:9092 --entity-type topics --entity-name configured-topic --alter --delete-config min.insync.replicas
   ```
